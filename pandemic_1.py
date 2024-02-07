@@ -5,7 +5,7 @@ import random
 
 time1=tm.time()
 
-json_file_path = "J.5.1.json"
+json_file_path = "J.10.20.json"
 
 '''competition: 'J'(tournament) or 'RR' '''
 
@@ -79,8 +79,12 @@ def maxfirst(n,r,delete_node=1,random_draw=None, random_thrs=2):
         # nodels=sorted_nodes_by_degree[r:]
         gg=g.copy()
         aa=a[:delete_node]
-        subgraph_aa_and_neighbors = gg.subgraph(aa + list(set.union(*[set(gg.neighbors(node)) for node in aa])))
-        gg.remove_nodes_from(subgraph_aa_and_neighbors.nodes())
+        subgraph_nodes = aa + list(set.union(*[set(gg.neighbors(node)) for node in aa]))
+        nodes_to_remove = list(gg.subgraph(subgraph_nodes).nodes())
+
+        gg.remove_nodes_from(nodes_to_remove)
+        # subgraph_aa_and_neighbors = gg.subgraph(aa + list(set.union(*[set(gg.neighbors(node)) for node in aa])))
+        # gg.remove_nodes_from(subgraph_aa_and_neighbors.nodes())
         sort2=sorted(gg.nodes(), key=lambda x: gg.degree(x), reverse=True)
         for i in sort2:
             if r_left==0:
@@ -93,8 +97,14 @@ def maxfirst(n,r,delete_node=1,random_draw=None, random_thrs=2):
         r_left=n-r-random_draw
         gg=g.copy()
         aa=a[:delete_node]
-        subgraph_aa_and_neighbors = gg.subgraph(aa + list(set.union(*[set(gg.neighbors(node)) for node in aa])))
-        gg.remove_nodes_from(subgraph_aa_and_neighbors.nodes())
+
+        subgraph_nodes = aa + list(set.union(*[set(gg.neighbors(node)) for node in aa]))
+
+        nodes_to_remove = list(gg.subgraph(subgraph_nodes).nodes())
+
+        gg.remove_nodes_from(nodes_to_remove)
+        # subgraph_aa_and_neighbors = gg.subgraph(aa + list(set.union(*[set(gg.neighbors(node)) for node in aa])))
+        # gg.remove_nodes_from(subgraph_aa_and_neighbors.nodes())
         sort2=sorted(gg.nodes(), key=lambda x: gg.degree(x), reverse=True)
         for i in sort2:
             if r_left==0:
@@ -151,7 +161,9 @@ if gph_id==1 or gph_id==2 or gph_id==3:
         sol.append(maxfirst(n=num_seeds, r=2, delete_node=1,random_draw=2))
     random.shuffle(sol)
 elif gph_id==4:
-    for i in range(33):
+    for i in range(50):
+        # sol.append(maxfirst(n=num_seeds,r=num_seeds))
+        #
         sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
     for i in range(10):
         sol.append(maxfirst(n=num_seeds,r=num_seeds-2,delete_node=3))
