@@ -5,7 +5,7 @@ import random
 
 time1=tm.time()
 
-json_file_path = "J.10.20.json"
+json_file_path = "J.20.31.json"
 
 '''competition: 'J'(tournament) or 'RR' '''
 
@@ -60,7 +60,7 @@ avg_deg=g.number_of_edges()/g.number_of_nodes()
 sorted_nodes_by_degree = sorted(g.nodes(), key=lambda x: g.degree(x), reverse=True)
 
 def rank_deg(deg):
-    return deg-1
+    return (deg-2)**1.5
 def maxfirst(n,r,delete_node=1,random_draw=None, random_thrs=2):
     '''
 
@@ -131,6 +131,88 @@ def maxfirst(n,r,delete_node=1,random_draw=None, random_thrs=2):
             a.update(sort2[:rr])
         return list(a)
 
+def trapmax(n,r=0,max_nb=[2,3],jungle=False,max_thrd=0.4,delete_node=1,random_draw=0, random_thrs=2):
+    a=[]
+    maxlist=sorted_nodes_by_degree[:int(max_thrd*n)]
+    if g.has_edge(sorted_nodes_by_degree[0],sorted_nodes_by_degree[1]):
+        temp=list(set.union(set(g.neighbors(sorted_nodes_by_degree[0])),set(g.neighbors(sorted_nodes_by_degree[1]))))
+        if len(temp)<max_nb[1]:
+            a.extend(temp)
+        else:
+            sort_temp=sorted(temp, key=lambda x: g.degree(x), reverse=True)
+            if jungle:
+                for i in range(len(sort_temp)):
+                    if sort_temp[i] in maxlist:
+                        continue
+                    if len(a)==max_nb[1]:
+                        break
+                    a.append(sort_temp[i])
+
+            a.extend(sort_temp[:max_nb[1]])
+    else:
+        temp=list(g.neighbors(sorted_nodes_by_degree[0]))
+        if len(temp)<max_nb[0]:
+            a.extend(temp)
+        else:
+            sort_temp=sorted(temp, key=lambda x: g.degree(x), reverse=True)
+            if jungle:
+                for i in range(len(sort_temp)):
+                    if sort_temp[i] in maxlist:
+                        continue
+                    if len(a)==max_nb[0]:
+                        break
+                    a.append(sort_temp[i])
+
+            a.extend(sort_temp[:max_nb[0]])
+    a=set(a)
+    a.union(set(sorted_nodes_by_degree[:r]))
+
+    ###
+    r_left = n -len(a)
+    if r_left==0:
+        return list(a)
+    if random_draw>=r_left:
+
+        random_draw=r_left
+        r_left=0
+    else:
+        r_left-=random_draw
+    gg = g.copy()
+    aa = sorted_nodes_by_degree[:delete_node]
+
+    subgraph_nodes = aa + list(set.union(*[set(gg.neighbors(node)) for node in aa]))
+
+    nodes_to_remove = list(gg.subgraph(subgraph_nodes).nodes())
+
+    gg.remove_nodes_from(nodes_to_remove)
+    # subgraph_aa_and_neighbors = gg.subgraph(aa + list(set.union(*[set(gg.neighbors(node)) for node in aa])))
+    # gg.remove_nodes_from(subgraph_aa_and_neighbors.nodes())
+    sort2 = sorted(gg.nodes(), key=lambda x: gg.degree(x), reverse=True)
+    for i in sort2:
+        if r_left == 0:
+            break
+        if i not in a:
+            a.add(i)
+            r_left -= 1
+    # a = set(a)
+    selected_nodes = [node for node in sort2 if g.degree(node) > random_thrs]
+    prob = {node: rank_deg(g.degree(node)) for node in selected_nodes}
+    total_prob = sum(prob.values())
+    normalized_prob = {node: prb / total_prob for node, prb in prob.items()}
+    ii = 0
+    while len(a) < n and ii < 10:
+        rr = n - len(a)
+        random_selected_nodes = random.choices(list(normalized_prob.keys()), weights=list(normalized_prob.values()),
+                                               k=min(rr, len(selected_nodes)))
+        a.update(random_selected_nodes)
+        ii += 1
+    if len(a) < n:
+        g_a = gg.subgraph(a)
+        gg.remove_nodes_from(g_a.nodes())
+        sort2 = sorted(gg.nodes(), key=lambda x: gg.degree(x), reverse=True)
+        rr = n - len(a)
+        a.update(sort2[:rr])
+    return list(a)
 
 
 
@@ -151,33 +233,87 @@ def write_list_to_txt(a, b):
 sol=[]
 # for i in range(50):
 #     sol.append(maxfirst(num_seeds,num_seeds//5,random_draw=1))
+if competition=='RR':
+    if gph_id==1 or gph_id==2:
+        for i in range(16):
+            sol.append((trapmax(n=num_seeds,r=1,delete_node=1,max_nb=[2,3],jungle=False,random_draw=0)))
+        for i in range(16):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[2,3],jungle=False,random_draw=1)))
 
-if gph_id==1 or gph_id==2 or gph_id==3:
-    for i in range(17):
-        sol.append(maxfirst(n=num_seeds,r=2,delete_node=1,random_draw=int(0.4*num_seeds)))
-    for i in range(26):
-        sol.append(maxfirst(n=num_seeds,r=1,delete_node=1,random_draw=num_seeds-3))
-    for i in range(7):
-        sol.append(maxfirst(n=num_seeds, r=2, delete_node=1,random_draw=2))
-    random.shuffle(sol)
-elif gph_id==4:
-    for i in range(50):
-        # sol.append(maxfirst(n=num_seeds,r=num_seeds))
-        #
-        sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
-    for i in range(10):
-        sol.append(maxfirst(n=num_seeds,r=num_seeds-2,delete_node=3))
-    for i in range(7):
-        sol.append(maxfirst(n=num_seeds, r=3, delete_node=1,random_draw=2))
-    random.shuffle(sol)
+        for i in range(10):
+            sol.append(maxfirst(n=num_seeds,r=2,delete_node=1,random_draw=int(0.4*num_seeds)))
+        for i in range(8):
+            sol.append(maxfirst(n=num_seeds,r=1,delete_node=1,random_draw=num_seeds-3))
+        # for i in range(7):
+        #     sol.append(maxfirst(n=num_seeds, r=2, delete_node=1,random_draw=2))
+        random.shuffle(sol)
+    elif gph_id==3:
+        for i in range(20):
+            sol.append((trapmax(n=num_seeds, r=3, delete_node=1, max_nb=[2, 3], jungle=False, random_draw=2)))
+        for i in range(15):
+            sol.append((trapmax(n=num_seeds, r=0, delete_node=1, max_nb=[3, 4], jungle=False, random_draw=int(0.2*num_seeds))))
+
+        for i in range(10):
+            sol.append(maxfirst(n=num_seeds, r=3, delete_node=1, random_draw=int(0.4 * num_seeds)))
+        for i in range(5):
+            sol.append(maxfirst(n=num_seeds, r=1, delete_node=1, random_draw=num_seeds - 3))
+        random.shuffle(sol)
+    elif gph_id==4:
+        for i in range(32):
+            # sol.append(maxfirst(n=num_seeds,r=num_seeds))
+            #
+            sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
+        for i in range(8):
+            sol.append(maxfirst(n=num_seeds,r=int(0.6*num_seeds),delete_node=3))
+        for i in range(10):
+            sol.append(maxfirst(n=num_seeds, r=3, delete_node=1,random_draw=2))
+        random.shuffle(sol)
+    else:
+        for i in range(33):
+            sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
+        for i in range(10):
+            sol.append(maxfirst(n=num_seeds,r=int(0.6*num_seeds),delete_node=3))
+        for i in range(7):
+            sol.append(maxfirst(n=num_seeds, r=3, delete_node=1,random_draw=3))
+        random.shuffle(sol)
 else:
-    for i in range(33):
-        sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
-    for i in range(10):
-        sol.append(maxfirst(n=num_seeds,r=num_seeds-2,delete_node=3))
-    for i in range(7):
-        sol.append(maxfirst(n=num_seeds, r=3, delete_node=1,random_draw=3))
-    random.shuffle(sol)
+    if gph_id==1:
+        for i in range(18):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[3,4],jungle=True,random_draw=1)))
+        for i in range(16):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[3,4],jungle=True,random_draw=0)))
+        for i in range(16):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[3,4],jungle=True,random_draw=int(0.3*num_seeds))))
+
+        random.shuffle(sol)
+    elif gph_id==2:
+        for i in range(20):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[3,4],jungle=True,random_draw=int(0.2*num_seeds))))
+        for i in range(25):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=2,max_nb=[4,5],jungle=True,random_draw=int(0.5*num_seeds))))
+        for i in range(5):
+            sol.append((trapmax(n=num_seeds,r=0,delete_node=1,max_nb=[3,4],jungle=True,random_draw=int(0.3*num_seeds))))
+
+        random.shuffle(sol)
+    elif gph_id==3:
+        for i in range(20):
+            sol.append((trapmax(n=num_seeds, r=0, delete_node=1, max_nb=[3, 4], jungle=True,
+                                random_draw=int(0.2 * num_seeds))))
+        for i in range(25):
+            sol.append((trapmax(n=num_seeds, r=0, delete_node=2, max_nb=[4, 5], jungle=True,
+                                random_draw=int(0.5 * num_seeds))))
+        for i in range(5):
+            sol.append((trapmax(n=num_seeds, r=0, delete_node=1, max_nb=[3, 4], jungle=True,
+                                random_draw=int(0.3 * num_seeds))))
+        random.shuffle(sol)
+    else:
+        for i in range(33):
+            sol.append(maxfirst(n=num_seeds,r=int(0.4*num_seeds),delete_node=2))
+        for i in range(10):
+            sol.append(maxfirst(n=num_seeds,r=int(0.6*num_seeds),delete_node=3))
+        for i in range(7):
+            sol.append(maxfirst(n=num_seeds, r=3, delete_node=1,random_draw=3))
+        random.shuffle(sol)
 
 write_list_to_txt(sol, json_file_path)
 
